@@ -9,7 +9,7 @@ export const registerUser = async (
   email,
   password,
   role,
-  loggedInUserRole // Add this parameter to check the role of the logged-in user
+  loggedInUserRole
 ) => {
   // Check if all fields are provided
   if (!serviceNumber || !name || !email || !password || !role) {
@@ -21,12 +21,28 @@ export const registerUser = async (
     throw new ErrorWithStatus('Officers cannot create users', 403);
   }
 
+  // Prevent creation of SuperAdmin from the frontend
+  if (role === 'SuperAdmin') {
+    throw new ErrorWithStatus(
+      'SuperAdmin can only be created from the backend',
+      403
+    );
+  }
+
   // Ensure the role being created is either Admin or Officer
   if (role !== 'Admin' && role !== 'Officer') {
     throw new ErrorWithStatus(
       'Invalid role. Only Admins and Officers can be created',
       400
     );
+  }
+
+  // Check if user already exists
+  const existingUser = await User.findOne({
+    $or: [{ serviceNumber }, { email }],
+  });
+  if (existingUser) {
+    throw new ErrorWithStatus('User already exists', 400);
   }
 
   // Hash password
@@ -42,11 +58,16 @@ export const registerUser = async (
   });
 
   await newUser.save();
-  delete newUser.password;
   return {
     message: 'User created successfully',
     data: {
-      user: newUser,
+      id: newUser._id,
+      serviceNumber: newUser.serviceNumber,
+      name: newUser.name,
+      email: newUser.email,
+      role: newUser.role,
+      updateAt: newUser.updatedAt,
+      createAt: newUser.createdAt,
     },
   };
 };
@@ -54,7 +75,7 @@ export const registerUser = async (
 export const loginUser = async (serviceNumber, password) => {
   const user = await User.findOne({ serviceNumber });
   if (!user) {
-    throw new Error('User not found', 404);
+    throw new ErrorWithStatus('User not found', 404);
   }
 
   const isPasswordValid = await bcrypt.compare(password, user.password);
@@ -72,9 +93,18 @@ export const loginUser = async (serviceNumber, password) => {
   );
 
   return {
-    message: 'Login sucessful',
+    message: 'Login successful',
     data: {
-      acessToken: token,
+      accessToken: token,
+      user: {
+        id: user._id,
+        name: user.name,
+        serviceNumber: user.serviceNumber,
+        role: user.role,
+        email: user.email,
+        updateAt: user.updatedAt,
+        createAt: user.createdAt,
+      },
     },
   };
 };
