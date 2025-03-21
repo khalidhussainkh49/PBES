@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 const userSchema = new mongoose.Schema({
   serviceNumber: {
-    type: String,
+    type: Number,
     required: true,
     unique: true,
   },
@@ -21,7 +21,7 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['superadmin', 'admin', 'officer'],
+    enum: ['SuperAdmin', 'Admin', 'Officer'],
     required: true,
   },
   createdAt: {
